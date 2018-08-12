@@ -64,10 +64,10 @@
 
 ![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/10.png)
 
-> 上式中， $\Gamma(n) = (n-1)!\quad\forall n\in\mathbb N$是遗忘门的权重矩阵，表示把两个向量连接成一个更长的向量，是遗忘门的偏置项，是sigmoid函数。如果输入的维度是，隐藏层的维度是，单元状态的维度是（通常），则遗忘门的权重矩阵维度是。事实上，权重矩阵都是两个矩阵拼接而成的：一个是，它对应着输入项，其维度为；一个是，它对应着输入项，其维度为。可以写为：
+> 上式中， 是遗忘门的权重矩阵，表示把两个向量连接成一个更长的向量，是遗忘门的偏置项，是sigmoid函数。如果输入的维度是，隐藏层的维度是，单元状态的维度是（通常），则遗忘门的权重矩阵维度是。事实上，权重矩阵都是两个矩阵拼接而成的：一个是，它对应着输入项，其维度为；一个是，它对应着输入项，其维度为。可以写为：
 
 ## 输入门 (input gate)
 
 ## 输出门 (output gate)
 
-<img src="https://latex.codecogs.com/gif.latex?ax^{2}&space;&plus;&space;by^{2}&space;&plus;&space;c&space;=&space;0" title="ax^{2} + by^{2} + c = 0" />
+<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;ax^{2}&space;&plus;&space;by^{2}&space;&plus;&space;c&space;=&space;0" title="ax^{2} + by^{2} + c = 0" />
