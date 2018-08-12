@@ -71,5 +71,18 @@
 
 ## 输入门 (input gate)
 
+> 输入门决定了要往cell state中保存什么新的信息。其通过输入上一状态的输出<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;h_{t-1}" title="h_{t-1}" />、当前状态输入信息<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;x_{t}" title="x_{t}" />到一个Sigmoid函数中，产生一个介于0到1之间的数值<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;i_{t}" title="i_{t}" />来确定我们需要保留多少的新信息。同时，一个tanh层会通过上一状态的输出<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;h_{t-1}" title="h_{t-1}" />、当前状态输入信息<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;x_{t}" title="x_{t}" />来得到一个将要加入到cell state中的“候选新信息”<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;\widetilde{C_{t}}" title="\widetilde{C_{t}}" />。
+
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/11.png)
+
+现在计算当前时刻的单元状态。它是由上一次的单元状态按元素乘以遗忘门，丢弃掉我们确定需要丢弃的信息；然后把当前输入的单元状态按元素乘以输入门，将两个积加和，这就是新的候选值：
+
+<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;C_{t}=f_{t}*C_{t-1}&plus;i_{t}*\widetilde{C_{t}}" title="C_{t}=f_{t}*C_{t-1}+i_{t}*\widetilde{C_{t}}" />
+
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/12.png)
+
 ## 输出门 (output gate)
 
+> 输出门决定了要从cell state中输出什么信息。这个输出将会基于我们的细胞状态，但是也是一个过滤后的版本，会先有一个Sigmoid函数产生一个介于0到1之间的数值<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;o_{t}" title="o_{t}" />来确定我们需要输出多少cell state中的信息。cell state的信息再与<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;o_{t}" title="o_{t}" />相乘时首先会经过一个tanh层进行“激活”（非线性变换）。得到的就是这个LSTM block的输出信息<img src="https://latex.codecogs.com/svg.latex?\dpi{300}&space;h_{t}" title="h_{t}" />。
+
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/13.png)
