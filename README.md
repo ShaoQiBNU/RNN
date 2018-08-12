@@ -75,5 +75,3 @@
 
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
 
-$$\frac{7x+5}{1+y^2}$$
-
