@@ -238,3 +238,8 @@ with tf.Session() as sess:
         batch_x = batch_x.reshape([batch_size, n_steps, n_inputs])
         print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: batch_x, y: batch_y}))
 ```
+
+
+参考：
+
+http://colah.github.io/posts/2015-08-Understanding-LSTMs/.
