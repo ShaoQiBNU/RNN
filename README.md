@@ -239,7 +239,113 @@ with tf.Session() as sess:
         print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: batch_x, y: batch_y}))
 ```
 
+> 基于Keras框架，采用LSTM实现文本二分类，代码入下：
+
+```python
+###################### load packages ####################
+from keras.datasets import imdb
+from keras import preprocessing
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers.recurrent import LSTM
+from keras.utils.np_utils import to_categorical
+
+
+###################### load data ####################
+######### 只考虑最常见的1000个词 ########
+num_words = 1000
+
+######### 导入数据 #########
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=num_words)
+
+print(x_train.shape)
+print(x_train[0][:5])
+
+print(y_train.shape)
+print(y_train[0])
+
+
+###################### preprocess data ####################
+######## 句子长度最长设置为20 ########
+max_len = 20
+
+######## 对文本进行填充，将文本转成相同长度 ########
+x_train = preprocessing.sequence.pad_sequences(x_train, maxlen=max_len)
+x_test = preprocessing.sequence.pad_sequences(x_test, maxlen=max_len)
+
+print(x_train.shape)
+print(x_train[0])
+
+######## 对label做one-hot处理 ########
+num_class = 2
+y_train = to_categorical(y_train, num_class)
+y_test = to_categorical(y_test, num_class)
+
+print(y_train.shape)
+print(y_train[0])
+
+
+###################### build network ####################
+######## word dim 词向量维度 ########
+word_dim = 8
+
+######## network structure ########
+model = Sequential()
+model.add(Embedding(input_dim=10000, output_dim=word_dim, input_length=max_len))
+model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1))
+model.add(Dense(num_class, activation='softmax'))
+
+print(model.summary())
+
+######## optimization and train ########
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+model.fit(x_train, y_train, batch_size=512, epochs=20, verbose=1, validation_data=(x_test, y_test))
+```
+
+> 运行结果如下：
+
+```
+(25000,)
+[1, 14, 22, 16, 43]
+(25000,)
+1
+(25000, 20)
+[ 65  16  38   2  88  12  16 283   5  16   2 113 103  32  15  16   2  19
+ 178  32]
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+embedding_20 (Embedding)     (None, 20, 8)             80000     
+_________________________________________________________________
+lstm_20 (LSTM)               (None, 256)               271360    
+_________________________________________________________________
+dense_20 (Dense)             (None, 2)                 514       
+=================================================================
+Total params: 351,874
+Trainable params: 351,874
+Non-trainable params: 0
+_________________________________________________________________
+None
+Train on 25000 samples, validate on 25000 samples
+Epoch 1/20
+25000/25000 [==============================] - 26s 1ms/step - loss: 0.6702 - acc: 0.5731 - val_loss: 0.6158 - val_acc: 0.6805
+Epoch 2/20
+25000/25000 [==============================] - 23s 910us/step - loss: 0.5754 - acc: 0.7052 - val_loss: 0.5413 - val_acc: 0.7270
+Epoch 3/20
+25000/25000 [==============================] - 21s 840us/step - loss: 0.5261 - acc: 0.7368 - val_loss: 0.5198 - val_acc: 0.7372
+Epoch 4/20
+25000/25000 [==============================] - 23s 901us/step - loss: 0.5083 - acc: 0.7474 - val_loss: 0.5202 - val_acc: 0.7360
+Epoch 5/20
+25000/25000 [==============================] - 22s 865us/step - loss: 0.5036 - acc: 0.7522 - val_loss: 0.5181 - val_acc: 0.7397
+Epoch 6/20
+25000/25000 [==============================] - 22s 878us/step - loss: 0.5012 - acc: 0.7514 - val_loss: 0.5158 - val_acc: 0.7388
+
+```
 
 参考：
 
 http://colah.github.io/posts/2015-08-Understanding-LSTMs/.
+
+https://www.jianshu.com/p/9dc9f41f0b29/.
+
+
