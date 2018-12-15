@@ -291,8 +291,12 @@ word_dim = 8
 
 ######## network structure ########
 model = Sequential()
+#### Embedding层 ####
 model.add(Embedding(input_dim=10000, output_dim=word_dim, input_length=max_len))
+#### 两层LSTM，需要在前一层返回序列，设置return_sequences参数为True即可 ####
+model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1, return_sequences=True))
 model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1))
+#### 输出层 ####
 model.add(Dense(num_class, activation='softmax'))
 
 print(model.summary())
@@ -315,31 +319,32 @@ model.fit(x_train, y_train, batch_size=512, epochs=20, verbose=1, validation_dat
 _________________________________________________________________
 Layer (type)                 Output Shape              Param #   
 =================================================================
-embedding_20 (Embedding)     (None, 20, 8)             80000     
+embedding_22 (Embedding)     (None, 20, 8)             80000     
 _________________________________________________________________
-lstm_20 (LSTM)               (None, 256)               271360    
+lstm_23 (LSTM)               (None, 20, 256)           271360    
 _________________________________________________________________
-dense_20 (Dense)             (None, 2)                 514       
+lstm_24 (LSTM)               (None, 256)               525312    
+_________________________________________________________________
+dense_21 (Dense)             (None, 2)                 514       
 =================================================================
-Total params: 351,874
-Trainable params: 351,874
+Total params: 877,186
+Trainable params: 877,186
 Non-trainable params: 0
 _________________________________________________________________
 None
 Train on 25000 samples, validate on 25000 samples
 Epoch 1/20
-25000/25000 [==============================] - 26s 1ms/step - loss: 0.6702 - acc: 0.5731 - val_loss: 0.6158 - val_acc: 0.6805
+25000/25000 [==============================] - 48s 2ms/step - loss: 0.6765 - acc: 0.5713 - val_loss: 0.6089 - val_acc: 0.6667
 Epoch 2/20
-25000/25000 [==============================] - 23s 910us/step - loss: 0.5754 - acc: 0.7052 - val_loss: 0.5413 - val_acc: 0.7270
+25000/25000 [==============================] - 42s 2ms/step - loss: 0.5660 - acc: 0.7066 - val_loss: 0.5293 - val_acc: 0.7306
 Epoch 3/20
-25000/25000 [==============================] - 21s 840us/step - loss: 0.5261 - acc: 0.7368 - val_loss: 0.5198 - val_acc: 0.7372
+25000/25000 [==============================] - 42s 2ms/step - loss: 0.5245 - acc: 0.7375 - val_loss: 0.5282 - val_acc: 0.7314
 Epoch 4/20
-25000/25000 [==============================] - 23s 901us/step - loss: 0.5083 - acc: 0.7474 - val_loss: 0.5202 - val_acc: 0.7360
+25000/25000 [==============================] - 43s 2ms/step - loss: 0.5105 - acc: 0.7464 - val_loss: 0.5140 - val_acc: 0.7386
 Epoch 5/20
-25000/25000 [==============================] - 22s 865us/step - loss: 0.5036 - acc: 0.7522 - val_loss: 0.5181 - val_acc: 0.7397
+25000/25000 [==============================] - 41s 2ms/step - loss: 0.4988 - acc: 0.7548 - val_loss: 0.5138 - val_acc: 0.7406
 Epoch 6/20
-25000/25000 [==============================] - 22s 878us/step - loss: 0.5012 - acc: 0.7514 - val_loss: 0.5158 - val_acc: 0.7388
-
+25000/25000 [==============================] - 42s 2ms/step - loss: 0.4949 - acc: 0.7581 - val_loss: 0.5147 - val_acc: 0.7396
 ```
 
 参考：
