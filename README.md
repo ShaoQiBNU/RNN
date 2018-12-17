@@ -239,112 +239,20 @@ with tf.Session() as sess:
         print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: batch_x, y: batch_y}))
 ```
 
-> 基于Keras框架，采用LSTM实现文本分类。文本采用imdb影评分类语料，共25,000条影评，label标记为正面/负面两种评价。影评已被预处理为词下标构成的序列。方便起见，单词的下标基于它在数据集中出现的频率标定，例如整数3所编码的词为数据集中第3常出现的词。这样的组织方法使得用户可以快速完成诸如“只考虑最常出现的10,000个词，但不考虑最常出现的20个词”这样的操作。词向量没有采用预训练好的向量，训练中生成，具体代码如下：
+> 基于Keras框架，采用LSTM实现文本分类。文本采用imdb影评分类语料，共25,000条影评，label标记为正面/负面两种评价。影评已被预处理为词下标构成的序列。方便起见，单词的下标基于它在数据集中出现的频率标定，例如整数3所编码的词为数据集中第3常出现的词。这样的组织方法使得用户可以快速完成诸如“只考虑最常出现的10,000个词，但不考虑最常出现的20个词”这样的操作。词向量没有采用预训练好的向量，训练中生成，采用的网络结构如图所示：
+
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/14.png)
+
+> 具体代码如下：
 
 ```python
-###################### load packages ####################
-from keras.datasets import imdb
-from keras import preprocessing
-from keras.models import Sequential
-from keras.layers import Dense, Embedding
-from keras.layers.recurrent import LSTM
-from keras.utils.np_utils import to_categorical
 
-
-###################### load data ####################
-######### 只考虑最常见的1000个词 ########
-num_words = 1000
-
-######### 导入数据 #########
-(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=num_words)
-
-print(x_train.shape)
-print(x_train[0][:5])
-
-print(y_train.shape)
-print(y_train[0])
-
-
-###################### preprocess data ####################
-######## 句子长度最长设置为20 ########
-max_len = 20
-
-######## 对文本进行填充，将文本转成相同长度 ########
-x_train = preprocessing.sequence.pad_sequences(x_train, maxlen=max_len)
-x_test = preprocessing.sequence.pad_sequences(x_test, maxlen=max_len)
-
-print(x_train.shape)
-print(x_train[0])
-
-######## 对label做one-hot处理 ########
-num_class = 2
-y_train = to_categorical(y_train, num_class)
-y_test = to_categorical(y_test, num_class)
-
-print(y_train.shape)
-print(y_train[0])
-
-
-###################### build network ####################
-######## word dim 词向量维度 ########
-word_dim = 8
-
-######## network structure ########
-model = Sequential()
-#### Embedding层 ####
-model.add(Embedding(input_dim=10000, output_dim=word_dim, input_length=max_len))
-#### 两层LSTM，需要在前一层返回序列，设置return_sequences参数为True即可 ####
-model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1, return_sequences=True))
-model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1))
-#### 输出层 ####
-model.add(Dense(num_class, activation='softmax'))
-
-print(model.summary())
-
-######## optimization and train ########
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-model.fit(x_train, y_train, batch_size=512, epochs=20, verbose=1, validation_data=(x_test, y_test))
 ```
 
 > 运行结果如下：
 
 ```
-(25000,)
-[1, 14, 22, 16, 43]
-(25000,)
-1
-(25000, 20)
-[ 65  16  38   2  88  12  16 283   5  16   2 113 103  32  15  16   2  19
- 178  32]
-_________________________________________________________________
-Layer (type)                 Output Shape              Param #   
-=================================================================
-embedding_22 (Embedding)     (None, 20, 8)             80000     
-_________________________________________________________________
-lstm_23 (LSTM)               (None, 20, 256)           271360    
-_________________________________________________________________
-lstm_24 (LSTM)               (None, 256)               525312    
-_________________________________________________________________
-dense_21 (Dense)             (None, 2)                 514       
-=================================================================
-Total params: 877,186
-Trainable params: 877,186
-Non-trainable params: 0
-_________________________________________________________________
-None
-Train on 25000 samples, validate on 25000 samples
-Epoch 1/20
-25000/25000 [==============================] - 48s 2ms/step - loss: 0.6765 - acc: 0.5713 - val_loss: 0.6089 - val_acc: 0.6667
-Epoch 2/20
-25000/25000 [==============================] - 42s 2ms/step - loss: 0.5660 - acc: 0.7066 - val_loss: 0.5293 - val_acc: 0.7306
-Epoch 3/20
-25000/25000 [==============================] - 42s 2ms/step - loss: 0.5245 - acc: 0.7375 - val_loss: 0.5282 - val_acc: 0.7314
-Epoch 4/20
-25000/25000 [==============================] - 43s 2ms/step - loss: 0.5105 - acc: 0.7464 - val_loss: 0.5140 - val_acc: 0.7386
-Epoch 5/20
-25000/25000 [==============================] - 41s 2ms/step - loss: 0.4988 - acc: 0.7548 - val_loss: 0.5138 - val_acc: 0.7406
-Epoch 6/20
-25000/25000 [==============================] - 42s 2ms/step - loss: 0.4949 - acc: 0.7581 - val_loss: 0.5147 - val_acc: 0.7396
+
 ```
 
 参考：
