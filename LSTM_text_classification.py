@@ -2,8 +2,7 @@
 from keras.datasets import imdb
 from keras import preprocessing
 from keras.models import Sequential
-from keras.layers import Dense, Embedding
-from keras.layers.recurrent import LSTM
+from keras.layers import Dense, Embedding, Dropout, LSTM
 from keras.utils.np_utils import to_categorical
 
 
@@ -47,11 +46,22 @@ word_dim = 8
 
 ######## network structure ########
 model = Sequential()
+
 #### Embedding层 ####
-model.add(Embedding(input_dim=10000, output_dim=word_dim, input_length=max_len))
-#### 两层LSTM，需要在前一层返回序列，设置return_sequences参数为True即可 ####
-model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1, return_sequences=True))
-model.add(LSTM(256, dropout=0.2, recurrent_dropout=0.1))
+model.add(Embedding(input_dim=1000, output_dim=word_dim, input_length=max_len))
+
+#### 两层LSTM，第一层，设置return_sequences参数为True ####
+model.add(LSTM(256, return_sequences=True))
+
+#### dropout ####
+model.add(Dropout(0.5))
+
+#### 两层LSTM，第二层，设置return_sequences参数为False ####
+model.add(LSTM(256, return_sequences=False))
+
+#### dropout ####
+model.add(Dropout(0.5))
+
 #### 输出层 ####
 model.add(Dense(num_class, activation='softmax'))
 
@@ -60,5 +70,3 @@ print(model.summary())
 ######## optimization and train ########
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
 model.fit(x_train, y_train, batch_size=512, epochs=20, verbose=1, validation_data=(x_test, y_test))
-
-
