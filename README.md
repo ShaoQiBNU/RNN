@@ -398,10 +398,23 @@ Epoch 20/20
 25000/25000 [==============================] - 40s 2ms/step - loss: 0.4472 - acc: 0.7840 - val_loss: 0.5532 - val_acc: 0.7216
 ```
 
+
+
+
+
+
+
+
+
+
+
+
 参考：
 
-http://colah.github.io/posts/2015-08-Understanding-LSTMs/.
+http://colah.github.io/posts/2015-08-Understanding-LSTMs/
 
-https://www.jianshu.com/p/9dc9f41f0b29/.
+https://www.jianshu.com/p/9dc9f41f0b29/
+
+https://blog.csdn.net/jmh1996/article/details/83476061
 
 
