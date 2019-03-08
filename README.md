@@ -398,15 +398,306 @@ Epoch 20/20
 25000/25000 [==============================] - 40s 2ms/step - loss: 0.4472 - acc: 0.7840 - val_loss: 0.5532 - val_acc: 0.7216
 ```
 
+# 八. 双向RNN
+
+## (一) 概念
+
+> 但是利用LSTM对句子进行建模还存在一个问题：无法编码从后到前的信息。在更细粒度的分类时，如对于强程度的褒义、弱程度的褒义、中性、弱程度的贬义、强程度的贬义的五分类任务需要注意情感词、程度词、否定词之间的交互。举一个例子，“这个餐厅脏得不行，没有隔壁好”，这里的“不行”是对“脏”的程度的一种修饰，通过BiLSTM可以更好的捕捉双向的语义依赖。BiLSTM是Bi-directional Long Short-Term Memory的缩写，是由前向LSTM与后向LSTM组合而成。比如，我们对“我爱中国”这句话进行编码，模型如图所示：
+
+Img15
+
+> 前向<img src="https://latex.codecogs.com/svg.latex?LSTM_{L}" title="LSTM_{L}" />依次输入“我”，“爱”，“中国”得到三个向量<img src="https://latex.codecogs.com/svg.latex?\{h_{L0},&space;h_{L1},&space;h_{L2}\}" title="\{h_{L0}, h_{L1}, h_{L2}\}" />，后向<img src="https://latex.codecogs.com/svg.latex?LSTM_{R}" title="LSTM_{R}" />依次输入“中国”，“爱”，“我”得到三个向量<img src="https://latex.codecogs.com/svg.latex?\{h_{R0},&space;h_{R1},&space;h_{R2}\}" title="\{h_{R0}, h_{R1}, h_{R2}\}" />。最后将前向和后向的隐向量进行拼接得到<img src="https://latex.codecogs.com/svg.latex?\{[h_{L0},&space;h_{R2}],&space;[h_{L1},&space;h_{R1}],&space;[h_{L2},&space;h_{R0}]\}" title="\{[h_{L0}, h_{R2}], [h_{L1}, h_{R1}], [h_{L2}, h_{R0}]\}" />，即<img src="https://latex.codecogs.com/svg.latex?\{h_{0},&space;h_{1},&space;h_{2}\}" title="\{h_{0}, h_{1}, h_{2}\}" />。对于情感分类任务来说，采用的句子的表示往往是<img src="https://latex.codecogs.com/svg.latex?[h_{L0},&space;h_{R2}]" title="[h_{L0}, h_{R2}]" />，因为其包含了前向与后向的所有信息，如图所示：
+
+Img16
+
+## (二) Tensorflow的Bi-RNN实现
+
+### 1. tensorflow的Bi-RNN代码
+
+> tensorflow的Bi-RNN代码如下：
+
+```python
+def bidirectional_dynamic_rnn(cell_fw, cell_bw, inputs, sequence_length=None,
+                              initial_state_fw=None, initial_state_bw=None,
+                              dtype=None, parallel_iterations=None,
+                              swap_memory=False, time_major=False, scope=None):
+  if not _like_rnncell(cell_fw):
+    raise TypeError("cell_fw must be an instance of RNNCell")
+  if not _like_rnncell(cell_bw):
+    raise TypeError("cell_bw must be an instance of RNNCell")
+
+  with vs.variable_scope(scope or "bidirectional_rnn"):
+    # Forward direction
+    with vs.variable_scope("fw") as fw_scope:
+      output_fw, output_state_fw = dynamic_rnn(
+          cell=cell_fw, inputs=inputs, sequence_length=sequence_length,
+          initial_state=initial_state_fw, dtype=dtype,
+          parallel_iterations=parallel_iterations, swap_memory=swap_memory,
+          time_major=time_major, scope=fw_scope)
+
+    # Backward direction
+    if not time_major:
+      time_dim = 1
+      batch_dim = 0
+    else:
+      time_dim = 0
+      batch_dim = 1
+
+    def _reverse(input_, seq_lengths, seq_dim, batch_dim):
+      if seq_lengths is not None:
+        return array_ops.reverse_sequence(
+            input=input_, seq_lengths=seq_lengths,
+            seq_dim=seq_dim, batch_dim=batch_dim)
+      else:
+        return array_ops.reverse(input_, axis=[seq_dim])
+
+    with vs.variable_scope("bw") as bw_scope:
+      inputs_reverse = _reverse(
+          inputs, seq_lengths=sequence_length,
+          seq_dim=time_dim, batch_dim=batch_dim)
+      tmp, output_state_bw = dynamic_rnn(
+          cell=cell_bw, inputs=inputs_reverse, sequence_length=sequence_length,
+          initial_state=initial_state_bw, dtype=dtype,
+          parallel_iterations=parallel_iterations, swap_memory=swap_memory,
+          time_major=time_major, scope=bw_scope)
+
+  output_bw = _reverse(
+      tmp, seq_lengths=sequence_length,
+      seq_dim=time_dim, batch_dim=batch_dim)
+
+  outputs = (output_fw, output_bw)
+  output_states = (output_state_fw, output_state_bw)
+
+  return (outputs, output_states)
+```
+
+### 2. 代码解读
+
+#### (1) 前向输入
+
+> 首先是对输入数据inputs，调用dynamic_rnn从前往后跑一下，得到output_fw和output_state_fw，其中output_fw是所有inputs的LSTM输出状态，output_state_fw是最终的输出状态，
+
+```python
+with vs.variable_scope(scope or "bidirectional_rnn"):
+    # Forward direction
+    with vs.variable_scope("fw") as fw_scope:
+      output_fw, output_state_fw = dynamic_rnn(
+          cell=cell_fw, inputs=inputs, sequence_length=sequence_length,
+          initial_state=initial_state_fw, dtype=dtype,
+          parallel_iterations=parallel_iterations, swap_memory=swap_memory,
+          time_major=time_major, scope=fw_scope)
+```
+
+#### (2) 反向输入
+
+> 定义一个局部函数：把输入的input_ 按照长度为seq_lengths 调用array_ops.rerverse_sequence 做一次转置：
+
+```python
+def _reverse(input_, seq_lengths, seq_dim, batch_dim):
+      if seq_lengths is not None:
+        return array_ops.reverse_sequence(
+            input=input_, seq_lengths=seq_lengths,
+            seq_dim=seq_dim, batch_dim=batch_dim)
+      else:
+        return array_ops.reverse(input_, axis=[seq_dim])
+```
+
+> 之后把inputs转置成inputs_reverse，然后对这个inputs_reverse跑一下dynamic_rnn得到tmp和output_state_bw：
+
+```python
+with vs.variable_scope("bw") as bw_scope:
+      inputs_reverse = _reverse(
+          inputs, seq_lengths=sequence_length,
+          seq_dim=time_dim, batch_dim=batch_dim)
+      tmp, output_state_bw = dynamic_rnn(
+          cell=cell_bw, inputs=inputs_reverse, sequence_length=sequence_length,
+          initial_state=initial_state_bw, dtype=dtype,
+          parallel_iterations=parallel_iterations, swap_memory=swap_memory,
+          time_major=time_major, scope=bw_scope)
+```
+
+> 再把这个输出tmp反转一下得到Output_bw向量：
+
+```python
+output_bw = _reverse(
+      tmp, seq_lengths=sequence_length,
+      seq_dim=time_dim, batch_dim=batch_dim)
+```
+
+#### (3) 前向和反向的LSTM输出堆叠
+
+> output_fw和output_bw堆叠在一起得到bi-rnn的输出，隐藏层状态output_state_fw和output_state_bw堆叠在一起得到bi-rnn的隐藏层状态，最终输出：
+
+```python
+  outputs = (output_fw, output_bw)
+  output_states = (output_state_fw, output_state_bw)
+
+  return (outputs, output_states)
+```
+
+## (三) 代码
+
+> 基于Keras框架，采用双向LSTM实现文本分类，代码如下：
+
+```python
+###################### load packages ####################
+from keras.datasets import imdb
+from keras import preprocessing
+from keras.models import Sequential
+from keras.layers import Dense, Embedding, Dropout, LSTM, Bidirectional, SpatialDropout1D
+from keras.utils.np_utils import to_categorical
 
 
+###################### load data ####################
+######### 只考虑最常见的1000个词 ########
+num_words = 1000
+
+######### 导入数据 #########
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=num_words)
+
+print(x_train.shape)
+print(x_train[0][:5])
+
+print(y_train.shape)
+print(y_train[0])
 
 
+###################### preprocess data ####################
+######## 句子长度最长设置为20 ########
+max_len = 20
+
+######## 对文本进行填充，将文本转成相同长度 ########
+x_train = preprocessing.sequence.pad_sequences(x_train, maxlen=max_len)
+x_test = preprocessing.sequence.pad_sequences(x_test, maxlen=max_len)
+
+print(x_train.shape)
+print(x_train[0])
+
+######## 对label做one-hot处理 ########
+num_class = 2
+y_train = to_categorical(y_train, num_class)
+y_test = to_categorical(y_test, num_class)
+
+print(y_train.shape)
+print(y_train[0])
 
 
+###################### build network ####################
+######## word dim 词向量维度 ########
+word_dim = 8
 
+######## network structure ########
+model = Sequential()
 
+#### Embedding层 ####
+model.add(Embedding(input_dim=1000, output_dim=word_dim, input_length=max_len))
 
+#### dropout ####
+model.add(SpatialDropout1D(0.3))
+
+#### bi-RNN ####
+model.add(Bidirectional(LSTM(100, dropout=0.3, recurrent_dropout=0.3)))
+
+#### dense ####
+model.add(Dense(1024, activation='relu'))
+
+#### dropout ####
+model.add(Dropout(0.8))
+
+#### dense ####
+model.add(Dense(1024, activation='relu'))
+
+#### dropout ####
+model.add(Dropout(0.8))
+
+#### 输出层 ####
+model.add(Dense(num_class, activation='softmax'))
+
+print(model.summary())
+
+######## optimization and train ########
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+model.fit(x_train, y_train, batch_size=512, epochs=20, verbose=1, validation_data=(x_test, y_test))
+```
+
+> 结果如下：
+
+```
+(25000,)
+[1, 14, 22, 16, 43]
+(25000,)
+1
+(25000, 20)
+[ 65  16  38   2  88  12  16 283   5  16   2 113 103  32  15  16   2  19
+ 178  32]
+(25000, 2)
+[0. 1.]
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+embedding_1 (Embedding)      (None, 20, 8)             8000      
+_________________________________________________________________
+spatial_dropout1d_1 (Spatial (None, 20, 8)             0         
+_________________________________________________________________
+bidirectional_1 (Bidirection (None, 200)               87200     
+_________________________________________________________________
+dense_1 (Dense)              (None, 1024)              205824    
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 1024)              0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 1024)              1049600   
+_________________________________________________________________
+dropout_2 (Dropout)          (None, 1024)              0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 2)                 2050      
+=================================================================
+Total params: 1,352,674
+Trainable params: 1,352,674
+Non-trainable params: 0
+_________________________________________________________________
+None
+Train on 25000 samples, validate on 25000 samples
+Epoch 1/20
+25000/25000 [==============================] - 22s 884us/step - loss: 0.6930 - acc: 0.5094 - val_loss: 0.6887 - val_acc: 0.5946
+Epoch 2/20
+25000/25000 [==============================] - 18s 700us/step - loss: 0.6251 - acc: 0.6475 - val_loss: 0.5463 - val_acc: 0.7220
+Epoch 3/20
+25000/25000 [==============================] - 18s 703us/step - loss: 0.5466 - acc: 0.7254 - val_loss: 0.5231 - val_acc: 0.7366
+Epoch 4/20
+25000/25000 [==============================] - 18s 704us/step - loss: 0.5296 - acc: 0.7377 - val_loss: 0.5179 - val_acc: 0.7367
+Epoch 5/20
+25000/25000 [==============================] - 18s 700us/step - loss: 0.5209 - acc: 0.7432 - val_loss: 0.5207 - val_acc: 0.7310
+Epoch 6/20
+25000/25000 [==============================] - 18s 702us/step - loss: 0.5151 - acc: 0.7452 - val_loss: 0.5144 - val_acc: 0.7380
+Epoch 7/20
+25000/25000 [==============================] - 17s 694us/step - loss: 0.5118 - acc: 0.7488 - val_loss: 0.5123 - val_acc: 0.7390
+Epoch 8/20
+25000/25000 [==============================] - 18s 727us/step - loss: 0.5064 - acc: 0.7542 - val_loss: 0.5153 - val_acc: 0.7361
+Epoch 9/20
+25000/25000 [==============================] - 18s 708us/step - loss: 0.5060 - acc: 0.7540 - val_loss: 0.5119 - val_acc: 0.7400
+Epoch 10/20
+25000/25000 [==============================] - 18s 720us/step - loss: 0.5042 - acc: 0.7518 - val_loss: 0.5110 - val_acc: 0.7401
+Epoch 11/20
+25000/25000 [==============================] - 18s 731us/step - loss: 0.5052 - acc: 0.7508 - val_loss: 0.5126 - val_acc: 0.7415
+Epoch 12/20
+25000/25000 [==============================] - 18s 736us/step - loss: 0.5003 - acc: 0.7578 - val_loss: 0.5114 - val_acc: 0.7400
+Epoch 13/20
+25000/25000 [==============================] - 19s 741us/step - loss: 0.4983 - acc: 0.7554 - val_loss: 0.5164 - val_acc: 0.7362
+Epoch 14/20
+25000/25000 [==============================] - 23s 925us/step - loss: 0.4976 - acc: 0.7616 - val_loss: 0.5115 - val_acc: 0.7403
+Epoch 15/20
+25000/25000 [==============================] - 23s 926us/step - loss: 0.4949 - acc: 0.7599 - val_loss: 0.5118 - val_acc: 0.7401
+Epoch 16/20
+25000/25000 [==============================] - 23s 903us/step - loss: 0.4957 - acc: 0.7608 - val_loss: 0.5110 - val_acc: 0.7403
+Epoch 17/20
+25000/25000 [==============================] - 23s 926us/step - loss: 0.4919 - acc: 0.7610 - val_loss: 0.5109 - val_acc: 0.7405
+Epoch 18/20
+25000/25000 [==============================] - 23s 927us/step - loss: 0.4909 - acc: 0.7622 - val_loss: 0.5107 - val_acc: 0.7408
+Epoch 19/20
+25000/25000 [==============================] - 23s 921us/step - loss: 0.4886 - acc: 0.7608 - val_loss: 0.5108 - val_acc: 0.7397
+Epoch 20/20
+25000/25000 [==============================] - 23s 917us/step - loss: 0.4895 - acc: 0.7624 - val_loss: 0.5132 - val_acc: 0.7369
+```
 
 
 参考：
