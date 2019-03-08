@@ -404,11 +404,11 @@ Epoch 20/20
 
 > 但是利用LSTM对句子进行建模还存在一个问题：无法编码从后到前的信息。在更细粒度的分类时，如对于强程度的褒义、弱程度的褒义、中性、弱程度的贬义、强程度的贬义的五分类任务需要注意情感词、程度词、否定词之间的交互。举一个例子，“这个餐厅脏得不行，没有隔壁好”，这里的“不行”是对“脏”的程度的一种修饰，通过BiLSTM可以更好的捕捉双向的语义依赖。BiLSTM是Bi-directional Long Short-Term Memory的缩写，是由前向LSTM与后向LSTM组合而成。比如，我们对“我爱中国”这句话进行编码，模型如图所示：
 
-Img15
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/15.png)
 
 > 前向<img src="https://latex.codecogs.com/svg.latex?LSTM_{L}" title="LSTM_{L}" />依次输入“我”，“爱”，“中国”得到三个向量<img src="https://latex.codecogs.com/svg.latex?\{h_{L0},&space;h_{L1},&space;h_{L2}\}" title="\{h_{L0}, h_{L1}, h_{L2}\}" />，后向<img src="https://latex.codecogs.com/svg.latex?LSTM_{R}" title="LSTM_{R}" />依次输入“中国”，“爱”，“我”得到三个向量<img src="https://latex.codecogs.com/svg.latex?\{h_{R0},&space;h_{R1},&space;h_{R2}\}" title="\{h_{R0}, h_{R1}, h_{R2}\}" />。最后将前向和后向的隐向量进行拼接得到<img src="https://latex.codecogs.com/svg.latex?\{[h_{L0},&space;h_{R2}],&space;[h_{L1},&space;h_{R1}],&space;[h_{L2},&space;h_{R0}]\}" title="\{[h_{L0}, h_{R2}], [h_{L1}, h_{R1}], [h_{L2}, h_{R0}]\}" />，即<img src="https://latex.codecogs.com/svg.latex?\{h_{0},&space;h_{1},&space;h_{2}\}" title="\{h_{0}, h_{1}, h_{2}\}" />。对于情感分类任务来说，采用的句子的表示往往是<img src="https://latex.codecogs.com/svg.latex?[h_{L0},&space;h_{R2}]" title="[h_{L0}, h_{R2}]" />，因为其包含了前向与后向的所有信息，如图所示：
 
-Img16
+![image](https://github.com/ShaoQiBNU/RNN/blob/master/images/16.png)
 
 ## (二) Tensorflow的Bi-RNN实现
 
